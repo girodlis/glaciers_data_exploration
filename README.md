@@ -1,29 +1,13 @@
-# glaciers_data_exploration
+# Glaciexplo
 
-pip freeze > requirements.txt
+This small package provides tools and methods to facilitate the selection of glaciers for modeling studies.
+It focuses on location, mean slope, area, availability of thickness measurements (e.g., from GlaThiDa), and reliable surface velocity data (from Millan et al., 2022).
 
-“If you use it more than twice, turn it into a function.”
+## References
 
-pytest --log-cli-level=INFO tests/
+- Le Meur, E., Gagliardini, O., Zwinger, T., & Ruokolainen, J. (2004). Glacier flow modelling: A comparison of the Shallow Ice Approximation and the full-stokes solution. Comptes Rendus Physique, 5(7), 709–722.
+- Millan, R., Mouginot, J., Rabatel, A., & Morlighem, M. (2022). Ice velocity and thickness of the world’s glaciers. Nature Geoscience, 15(2), 124–129.
 
-# Pull Request Review Checklist
+## License
 
-## Summary
-- [ ] Is the purpose of the change clearly explained?
-
-## Code Quality
-- [ ] Does the code follow naming conventions and coding standards?
-- [ ] Is the code modular and easy to understand?
-- [ ] Are there any redundant or unused code sections?
-
-## Functionality and Testing
-- [ ] Are the new features or fixes properly tested?
-- [ ] Are there any unhandled edge cases?
-
-## Documentation
-- [ ] Is there sufficient documentation for the new code?
-- [ ] Are docstrings provided for new functions or classes?
-
-## Performance and Security
-- [ ] Does the code introduce any performance issues?
-- [ ] Are there any potential security vulnerabilities?
+Distributed under the MIT License. See [`LICENSE`](./LICENSE) for more information.
