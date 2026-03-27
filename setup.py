@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name="galciexplo",
+    name="glaciexplo",
     version="0.1.0",
     description="Data exploration tools for glaciers",
     author="girodlis",
