@@ -4,12 +4,10 @@ import numpy as np
 import pandas as pd
 
 
-from src.slope import get_dem_slope
-from src.thickness import glacier_thickness_coverage
-from src.utils import get_ds
+from src import slope, velocity, thickness, utils
 
 
-def glaciers_location(gdf):
+def glaciers_location(gdf, outlines=False):
     """Create an interactive map of glaciers using Folium."""
 
     # Calculate the mean latitude and longitude for centering the map
@@ -23,8 +21,19 @@ def glaciers_location(gdf):
     for _, row in gdf.iterrows():
         folium.Marker(
             location=[row["CenLat"], row["CenLon"]],
-            tooltip=f"RGI ID: {row['RGIId']}<br>Slope: {row['Slope']:.2f}<br>Area: {row['Area']:.2f}",
+            tooltip=f"RGI ID: {row['RGIId']}<br>Mean slope: {row['Slope']:.2f}°<br>Area: {row['Area']:.2f}km2",
         ).add_to(glacier_map)
+        if outlines:
+            folium.GeoJson(
+                data=gdf.geometry,
+                name="Glacier Outlines",
+                style_function=lambda x: {
+                    "fillColor": "#00ffff",
+                    "color": "black",
+                    "weight": 1,
+                    "fillOpacity": 0.5,
+                },
+            ).add_to(glacier_map)
 
     return glacier_map
 
@@ -32,8 +41,8 @@ def glaciers_location(gdf):
 def plot_dem_slope(gdir, ax=None):
     """Plot the slope of the DEM for a glacier."""
 
-    ds = get_ds(gdir)
-    slope_masked = get_dem_slope(gdir)
+    ds = utils.get_ds(gdir)
+    slope_masked = slope.get_dem_slope(gdir)
 
     smap = ds.salem.get_map(countries=False)
     smap.set_shapefile(gdir.read_shapefile("outlines"))
@@ -41,7 +50,7 @@ def plot_dem_slope(gdir, ax=None):
 
     created_fig = False
     if ax is None:
-        fig, ax = plt.subplots(figsize=(9, 9))
+        f, ax = plt.subplots(figsize=(9, 9))
         created_fig = True
 
     smap.set_cmap("viridis")
@@ -67,23 +76,29 @@ def plot_thickness_coverage(gdir, ax=None):
 
     geom = gdir.read_shapefile("outlines")
     df_gtd = pd.read_csv(gdir.get_filepath("glathida_data"))
-    percent_thickness_coverage = glacier_thickness_coverage(gdir)
+    percentage, n_ij_grid = thickness.glacier_thickness_coverage(gdir)
 
     created_fig = False
     if ax is None:
         f, ax = plt.subplots(figsize=(9, 9))
         created_fig = True
 
+    if ax is not None:
+        s = 10
+    else:
+        s = 2
+
     df_gtd.plot.scatter(
-        x="x_proj", y="y_proj", c="thickness", cmap="viridis", s=10, ax=ax
+        x="x_proj", y="y_proj", c="thickness", cmap="viridis", ax=ax, s=s
     )
     geom.plot(ax=ax, facecolor="none", edgecolor="k")
-    plt.title(
-        f"Glacier: {gdir.rgi_id} - Thickness Coverage: {percent_thickness_coverage:.2f}%"
-    )
-    plt.xlabel("x_proj")
-    plt.ylabel("y_proj")
+
     if created_fig:
+        plt.title(
+            f"Glacier: {gdir.rgi_id} - Thickness Coverage: {percentage:.2f}% ({n_ij_grid} grid points)"
+        )
+        plt.xlabel("x_proj")
+        plt.ylabel("y_proj")
         plt.show()
 
 
@@ -97,7 +112,7 @@ def plot_velocity(gdir, ax=None):
     Returns:
         None
     """
-    ds = get_ds(gdir)
+    ds = utils.get_ds(gdir)
     # get the velocity data
     u = ds.millan_vx.where(ds.glacier_mask)
     v = ds.millan_vy.where(ds.glacier_mask)
@@ -130,3 +145,36 @@ def plot_velocity(gdir, ax=None):
     ax.set_title("Millan 2022 velocity")
     if created_fig:
         plt.show()
+
+
+def merge_glacier_data(gdirs, gdf, slope_threshold=20):
+    """Generate a merged GeoDataFrame containing:
+        - glacier information,
+        - thickness coverage,
+        - percentage of glacier surface with slope above threshold,
+        - velocity errors for glaciers.
+
+    Args:
+        gdirs: list of GlacierDirectory objects.
+        gdf: GeoDataFrame with glacier information (must contain 'RGIId' column).
+        slope_threshold: slope threshold in degrees to calculate the percentage of glacier surface above it.
+
+    Returns:
+        GeoDataFrame.
+    """
+    data_thick = thickness.create_df_thickness_coverage(gdirs)
+    data_vel = velocity.create_df_velocity_errors(gdirs)
+    data_slope = slope.create_df_slope_above(gdirs, threshold=slope_threshold)
+
+    # verify that the 'RGIId' column exists in all DataFrames
+    for df in [gdf, data_thick, data_vel, data_slope]:
+        if "RGIId" not in df.columns:
+            raise ValueError(
+                "All DataFrames must contain an 'RGIId' column for merging."
+            )
+
+    gdf_merged = gdf.merge(data_thick, on="RGIId", how="left")
+    gdf_merged = gdf_merged.merge(data_slope, on="RGIId", how="left")
+    gdf_merged = gdf_merged.merge(data_vel, on="RGIId", how="left")
+
+    return gdf_merged

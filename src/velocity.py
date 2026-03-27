@@ -21,6 +21,9 @@ def create_df_velocity_errors(gdirs):
     df_vel = get_velocity_statistics(gdirs)
     df_vel_errors = pd.DataFrame()
     df_vel_errors["velocity_avg_error"] = df_vel[["millan_avg_err_vel"]]
+    df_vel_errors["relative_avg_error"] = (
+        df_vel["millan_avg_err_vel"] / df_vel["millan_avg_vel"]
+    )
     df_vel_errors["RGIId"] = df_vel.index
     df_vel_errors = df_vel_errors.reset_index(drop=True)
     return df_vel_errors

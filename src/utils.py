@@ -5,6 +5,7 @@ from pathlib import Path
 import geopandas as gpd
 import xarray as xr
 import logging
+import warnings
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -28,6 +29,12 @@ def setup_oggm_env(
     """
     Configure the global OGGM environment and working directory.
     Run this once at the start of your script.
+
+    Args:
+        workspace_path (str): Path to the working directory. Use "c" for current directory, "p" for parent directory, or provide a custom path.
+        rgi_version (str): RGI version to use (e.g., "62").
+        use_mp (bool): Whether to use multiprocessing for OGGM tasks.
+        folder_name (str): Name of the folder to create for OGGM data
     """
     path_map = {"c": Path.cwd() / folder_name, "p": Path.cwd().parent / folder_name}
     work_dir = path_map.get(workspace_path, Path(workspace_path))
@@ -44,15 +51,34 @@ def setup_oggm_env(
 
 
 def fetch_rgi_data(region, version="62"):
-    """Fetch and load RGI glacier outlines for a specific region."""
+    """
+    Fetch and load RGI glacier outlines for a specific region.
+
+    Args:
+        region (int): RGI region code (e.g., 11 for European Alps).
+        version (str): RGI version to use (default is "62").
+
+    Returns:
+        GeoDataFrame: A GeoDataFrame containing the glacier outlines and some other information for the specified region.
+    """
 
     rgi_path = utils.get_rgi_region_file(region, version=version)
 
     return gpd.read_file(rgi_path)
 
 
-def filter_slope_area(gdf, slope_threshold=20, area_threshold=2):
-    """Filter glaciers based on slope and area thresholds."""
+def filter_slope_area(gdf, slope_threshold, area_threshold):
+    """
+    Filter glaciers based on slope and area thresholds.
+
+    Args:
+        gdf (GeoDataFrame): Input GeoDataFrame with glacier data.
+        slope_threshold (float): Minimum mean slope threshold in degrees.
+        area_threshold (float): Minimum area threshold in square kilometers.
+
+    Returns:
+        GeoDataFrame: A filtered GeoDataFrame containing only glaciers that meet the slope and area criteria.
+    """
 
     filtered_gdf = gdf[
         (gdf["Slope"] < slope_threshold) & (gdf["Area"] > area_threshold)
@@ -70,13 +96,21 @@ def process_glacier_directories(
 ):
     """
     Initializes glacier directories from preprocessed data.
+
+    Args:
+        gdf (GeoDataFrame): GeoDataFrame containing glacier information.
+        prepro_level (int): Preprocessing level to use (default is 3).
+        prepro_border (int): Border size for preprocessing (default is 80).
+        reset (bool): Whether to reset existing glacier directories (default is True).
+        base_url (str): Base URL where to found the preprocessed data.
     """
     # Safety Check
-    MAX_GLACIERS = 300
-    if len(gdf) > MAX_GLACIERS:
-        raise ValueError(
-            f"GDF length ({len(gdf)}) exceeds safety limit of {MAX_GLACIERS}."
-        )
+    if len(gdf) > 300:
+        warnings.warn(f"The GDF contains {len(gdf)} elements. This may take some time.")
+        response = input("Do you want to continue? (y/N) : ")
+        if response.lower() not in ("y", "yes"):
+            print("Operation cancelled by user.")
+            return
 
     base_url = base_url
 
