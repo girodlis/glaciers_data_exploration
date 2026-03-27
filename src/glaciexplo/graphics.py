@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 
 
-from src import slope, velocity, thickness, utils
+from glaciexplo import slope, velocity, thickness, utils
 
 
 def glaciers_location(gdf, outlines=False):

@@ -2,7 +2,7 @@ from oggm.core import gis
 import numpy as np
 import pandas as pd
 
-from src.utils import get_ds
+from glaciexplo.utils import get_ds
 
 
 def get_dem_slope(gdir):
