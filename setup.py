@@ -24,6 +24,7 @@ setup(
     extras_require={
         "dev": [
             "ipykernel",
+            "pytest",
         ],
     },
     package_dir={"": "src"},
